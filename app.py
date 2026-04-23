@@ -10,12 +10,29 @@ st.markdown("""
 
 /* MAIN BACKGROUND */
 .stApp {
-    background-color: #f5f7fa;
+    background-color: #ffffff;
 }
 
-/* SIDEBAR FIX */
+/* FORCE MAIN TEXT DARK */
+.main, .block-container {
+    color: #111827 !important;
+}
+
+/* HEADINGS */
+h1, h2, h3, h4, h5 {
+    color: #111827 !important;
+    font-weight: 700;
+}
+
+/* ALL TEXT FIX */
+p, span, label, div {
+    color: #111827 !important;
+    font-size: 18px !important;
+}
+
+/* SIDEBAR */
 section[data-testid="stSidebar"] {
-    background-color: #111827 !important;
+    background-color: #0f172a !important;
 }
 
 section[data-testid="stSidebar"] * {
@@ -23,33 +40,12 @@ section[data-testid="stSidebar"] * {
     font-size: 16px !important;
 }
 
-/* INPUT BOXES IN SIDEBAR */
+/* SIDEBAR INPUT BOXES */
 section[data-testid="stSidebar"] input,
 section[data-testid="stSidebar"] textarea {
-    background-color: #1f2937 !important;
+    background-color: #1e293b !important;
     color: #ffffff !important;
     border-radius: 8px;
-}
-
-/* SLIDER TEXT */
-section[data-testid="stSidebar"] .stSlider label {
-    color: white !important;
-}
-
-/* MAIN TEXT */
-h1 {
-    text-align: center;
-    font-size: 40px !important;
-    color: #111827;
-}
-
-h2, h3 {
-    font-size: 26px !important;
-    color: #111827;
-}
-
-p, label, div {
-    font-size: 18px !important;
 }
 
 /* BUTTON STYLE */
@@ -64,12 +60,23 @@ p, label, div {
 
 /* DOWNLOAD BUTTON */
 .stDownloadButton>button {
-    background-color: #10b981;
+    background-color: #16a34a;
     color: white;
     border-radius: 10px;
     height: 45px;
     width: 230px;
     font-size: 18px;
+}
+
+/* INPUT BOXES MAIN */
+input, textarea {
+    color: #111827 !important;
+    font-size: 16px !important;
+}
+
+/* PROGRESS BAR */
+.stProgress > div > div {
+    background-color: #2563eb;
 }
 
 </style>
@@ -150,7 +157,7 @@ for i, task in enumerate(st.session_state.tasks):
 # ------------------ STUDY TIPS ------------------
 st.header("💡 Smart Study Tips")
 
-st.info("""
+st.success("""
 ✔ Study in small sessions (Pomodoro: 25 min)  
 ✔ Revise regularly  
 ✔ Focus more on weak subjects  
