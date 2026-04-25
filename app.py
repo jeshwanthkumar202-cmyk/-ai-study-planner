@@ -11,64 +11,64 @@ except:
     client = None
 
 # ------------------ PAGE CONFIG ------------------
-st.set_page_config(
-    page_title="AI Study Planner",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+st.set_page_config(page_title="AI Study Planner", layout="wide")
 
-# ------------------ FORCE LIGHT THEME ------------------
+# ------------------ PERFECT VISIBILITY FIX ------------------
 st.markdown("""
 <style>
 
-/* GLOBAL */
-html, body, [class*="css"] {
-    background-color: #f9fafb !important;
-    color: #111827 !important;
-    font-size: 18px !important;
+/* MAIN BACKGROUND */
+.stApp {
+    background-color: #ffffff;
+}
+
+/* FORCE ALL TEXT DARK */
+html, body, [class*="css"]  {
+    color: #111111 !important;
 }
 
 /* HEADINGS */
 h1, h2, h3 {
-    color: #111827 !important;
+    color: #111111 !important;
+    font-weight: bold;
 }
 
 /* SIDEBAR */
 section[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #0f172a, #1e293b);
+    background-color: #0f172a !important;
 }
+
 section[data-testid="stSidebar"] * {
-    color: #ffffff !important;
+    color: white !important;
+}
+
+/* BUTTONS */
+.stButton>button {
+    background-color: #2563eb;
+    color: white;
+    border-radius: 10px;
+    height: 45px;
+    width: 230px;
+    font-size: 18px;
+}
+
+/* DOWNLOAD BUTTON */
+.stDownloadButton>button {
+    background-color: #16a34a;
+    color: white;
 }
 
 /* INPUTS */
 input, textarea {
-    color: #111827 !important;
-}
-
-/* BUTTON */
-.stButton>button {
-    background: linear-gradient(90deg, #2563eb, #3b82f6);
-    color: white;
-    border-radius: 12px;
-    height: 45px;
-    font-size: 18px;
-}
-
-/* CARD STYLE */
-.card {
-    background-color: white;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    margin-bottom: 20px;
+    color: #111111 !important;
+    background-color: #f9fafb !important;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
 # ------------------ TITLE ------------------
-st.title("📚 AI Personalized Study Planner")
+st.title("📚 AI Study Planner Pro")
 
 # ------------------ SIDEBAR ------------------
 st.sidebar.header("📥 Enter Details")
@@ -79,109 +79,90 @@ exam_date = st.sidebar.date_input("📅 Exam Date", min_value=date.today())
 weak_areas = st.sidebar.text_area("⚠ Weak Areas")
 
 # ------------------ AI FUNCTION ------------------
-def generate_plan(subjects, hours, days, weak):
-    if client:
-        prompt = f"""
-        Create a structured study plan.
+def generate_ai(subjects, hours, days, weak):
+    if not client:
+        return "⚠ AI not enabled (add API key)"
 
-        Subjects: {subjects}
-        Hours/day: {hours}
-        Days: {days}
-        Weak areas: {weak}
+    prompt = f"""
+    Create a day-wise study plan.
+    Subjects: {subjects}
+    Hours: {hours}
+    Days: {days}
+    Weak areas: {weak}
+    """
 
-        Keep it simple and clear.
-        """
-        try:
-            res = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{"role": "user", "content": prompt}]
-            )
-            return res.choices[0].message.content
-        except:
-            return "⚠ AI error. Showing basic plan instead."
+    try:
+        res = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a study planner."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        return res.choices[0].message.content
+    except:
+        return "❌ AI error"
 
-    # fallback (no AI)
-    subject_list = [s.strip() for s in subjects.split(",")]
-    plan = ""
-    per = max(1, hours // len(subject_list))
-
-    for d in range(1, days+1):
-        plan += f"Day {d}\n"
-        for s in subject_list:
-            plan += f"- {s}: {per} hrs\n"
-        plan += "\n"
-
-    return plan
-
-# ------------------ GENERATE ------------------
+# ------------------ GENERATE PLAN ------------------
 if st.sidebar.button("🚀 Generate Plan"):
-    if not subjects:
+
+    if subjects.strip() == "":
         st.warning("Enter subjects")
     else:
-        days = (exam_date - date.today()).days
+        days_left = (exam_date - date.today()).days
 
-        if days <= 0:
+        if days_left <= 0:
             st.error("Invalid exam date")
         else:
-            with st.spinner("Generating..."):
-                plan = generate_plan(subjects, hours, days, weak_areas)
-
-            # CARD DISPLAY
-            st.markdown('<div class="card">', unsafe_allow_html=True)
             st.subheader("📅 Study Plan")
+
+            with st.spinner("Generating..."):
+                plan = generate_ai(subjects, hours, days_left, weak_areas)
+
             st.write(plan)
-            st.markdown('</div>', unsafe_allow_html=True)
 
             st.download_button("📥 Download Plan", plan)
 
-# ------------------ PROGRESS TRACKER ------------------
-st.markdown('<div class="card">', unsafe_allow_html=True)
-st.subheader("📈 Progress Tracker")
+# ------------------ DAILY GOAL TRACKER ------------------
+st.header("🎯 Daily Goal Tracker")
 
-if "tasks" not in st.session_state:
-    st.session_state.tasks = []
+goal = st.text_input("Enter today's goal")
 
-task = st.text_input("Add completed topic")
+if "goals" not in st.session_state:
+    st.session_state.goals = []
 
-if st.button("➕ Add"):
-    if task:
-        st.session_state.tasks.append({"task": task, "done": False})
+if st.button("Add Goal"):
+    if goal:
+        st.session_state.goals.append({"goal": goal, "done": False})
 
-for i, t in enumerate(st.session_state.tasks):
-    st.session_state.tasks[i]["done"] = st.checkbox(t["task"], value=t["done"])
+for i, g in enumerate(st.session_state.goals):
+    st.session_state.goals[i]["done"] = st.checkbox(
+        g["goal"], value=g["done"]
+    )
 
-done = sum(t["done"] for t in st.session_state.tasks)
-total = len(st.session_state.tasks)
+# ------------------ PROGRESS ------------------
+st.header("📊 Progress Tracker")
 
-if total:
-    st.progress(done / total)
-    st.write(f"{done}/{total} completed")
+completed = sum(g["done"] for g in st.session_state.goals)
+total = len(st.session_state.goals)
+
+if total > 0:
+    percent = completed / total
+    st.write(f"Completed: {completed}/{total}")
+    st.progress(percent)
+
+    # Simple chart
+    st.bar_chart({"Progress": [completed, total - completed]})
 else:
-    st.write("No tasks yet")
+    st.write("No goals added")
 
-st.markdown('</div>', unsafe_allow_html=True)
-
-# ------------------ METRICS ------------------
-st.markdown('<div class="card">', unsafe_allow_html=True)
-st.subheader("📊 Quick Stats")
-
-col1, col2, col3 = st.columns(3)
-col1.metric("Subjects", len(subjects.split(",")) if subjects else 0)
-col2.metric("Hours/Day", hours)
-col3.metric("Days Left", (exam_date - date.today()).days)
-
-st.markdown('</div>', unsafe_allow_html=True)
-
-# ------------------ TIPS ------------------
-st.markdown('<div class="card">', unsafe_allow_html=True)
-st.subheader("💡 Smart Tips")
+# ------------------ SMART TIPS ------------------
+st.header("💡 Smart Tips")
 
 st.success("""
 ✔ Study consistently  
-✔ Focus weak areas  
-✔ Revise regularly  
+✔ Focus on weak areas  
+✔ Revise daily  
 ✔ Take breaks  
-✔ Sleep well  
+✔ Practice questions  
 """)
-
-st.markdown('</div>', unsafe_allow_html=True)
