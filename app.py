@@ -2,7 +2,7 @@ import streamlit as st
 from datetime import date
 import os
 
-# Optional AI
+# ------------------ OPTIONAL AI SETUP ------------------
 try:
     from openai import OpenAI
     api_key = os.getenv("OPENAI_API_KEY")
@@ -11,9 +11,9 @@ except:
     client = None
 
 # ------------------ PAGE CONFIG ------------------
-st.set_page_config(page_title="AI Study Planner", layout="wide")
+st.set_page_config(page_title="AI Study Planner Pro", layout="wide")
 
-# ------------------ PERFECT VISIBILITY FIX ------------------
+# ------------------ FULL UI + VISIBILITY FIX ------------------
 st.markdown("""
 <style>
 
@@ -22,8 +22,8 @@ st.markdown("""
     background-color: #ffffff;
 }
 
-/* FORCE ALL TEXT DARK */
-html, body, [class*="css"]  {
+/* FORCE TEXT DARK */
+html, body, [class*="css"] {
     color: #111111 !important;
 }
 
@@ -42,13 +42,32 @@ section[data-testid="stSidebar"] * {
     color: white !important;
 }
 
+/* INPUT FIX (IMPORTANT) */
+input, textarea {
+    color: #000000 !important;
+    background-color: #ffffff !important;
+    caret-color: #000000 !important;
+}
+
+/* PLACEHOLDER */
+input::placeholder, textarea::placeholder {
+    color: #6b7280 !important;
+}
+
+/* SIDEBAR INPUT */
+section[data-testid="stSidebar"] input,
+section[data-testid="stSidebar"] textarea {
+    background-color: #1e293b !important;
+    color: white !important;
+}
+
 /* BUTTONS */
 .stButton>button {
     background-color: #2563eb;
     color: white;
     border-radius: 10px;
     height: 45px;
-    width: 230px;
+    width: 240px;
     font-size: 18px;
 }
 
@@ -58,10 +77,9 @@ section[data-testid="stSidebar"] * {
     color: white;
 }
 
-/* INPUTS */
-input, textarea {
-    color: #111111 !important;
-    background-color: #f9fafb !important;
+/* PROGRESS BAR */
+.stProgress > div > div {
+    background-color: #2563eb;
 }
 
 </style>
@@ -70,25 +88,28 @@ input, textarea {
 # ------------------ TITLE ------------------
 st.title("📚 AI Study Planner Pro")
 
-# ------------------ SIDEBAR ------------------
+# ------------------ SIDEBAR INPUT ------------------
 st.sidebar.header("📥 Enter Details")
 
-subjects = st.sidebar.text_input("📘 Subjects")
+subjects = st.sidebar.text_input("📘 Subjects (comma separated)")
 hours = st.sidebar.slider("⏱ Study hours/day", 1, 12, 4)
 exam_date = st.sidebar.date_input("📅 Exam Date", min_value=date.today())
 weak_areas = st.sidebar.text_area("⚠ Weak Areas")
 
 # ------------------ AI FUNCTION ------------------
-def generate_ai(subjects, hours, days, weak):
+def generate_ai_plan(subjects, hours, days, weak):
     if not client:
-        return "⚠ AI not enabled (add API key)"
+        return "⚠ AI not enabled. Add OPENAI_API_KEY to use AI."
 
     prompt = f"""
-    Create a day-wise study plan.
+    Create a simple day-wise study plan.
+
     Subjects: {subjects}
-    Hours: {hours}
-    Days: {days}
+    Hours per day: {hours}
+    Days left: {days}
     Weak areas: {weak}
+
+    Keep it clear and structured.
     """
 
     try:
@@ -100,69 +121,74 @@ def generate_ai(subjects, hours, days, weak):
             ]
         )
         return res.choices[0].message.content
-    except:
-        return "❌ AI error"
+    except Exception as e:
+        return f"❌ AI Error: {str(e)}"
 
 # ------------------ GENERATE PLAN ------------------
 if st.sidebar.button("🚀 Generate Plan"):
 
     if subjects.strip() == "":
-        st.warning("Enter subjects")
+        st.warning("⚠ Please enter subjects")
     else:
         days_left = (exam_date - date.today()).days
 
         if days_left <= 0:
-            st.error("Invalid exam date")
+            st.error("❌ Exam date must be in future")
         else:
-            st.subheader("📅 Study Plan")
+            st.subheader("📅 Your Study Plan")
 
-            with st.spinner("Generating..."):
-                plan = generate_ai(subjects, hours, days_left, weak_areas)
+            with st.spinner("Generating plan..."):
+                plan = generate_ai_plan(subjects, hours, days_left, weak_areas)
 
             st.write(plan)
 
-            st.download_button("📥 Download Plan", plan)
+            st.download_button(
+                "📥 Download Plan",
+                plan,
+                file_name="study_plan.txt"
+            )
 
-# ------------------ DAILY GOAL TRACKER ------------------
+# ------------------ DAILY GOALS ------------------
 st.header("🎯 Daily Goal Tracker")
-
-goal = st.text_input("Enter today's goal")
 
 if "goals" not in st.session_state:
     st.session_state.goals = []
 
-if st.button("Add Goal"):
+goal = st.text_input("✍ Add today's goal")
+
+if st.button("➕ Add Goal"):
     if goal:
         st.session_state.goals.append({"goal": goal, "done": False})
 
 for i, g in enumerate(st.session_state.goals):
     st.session_state.goals[i]["done"] = st.checkbox(
-        g["goal"], value=g["done"]
+        f"✅ {g['goal']}", value=g["done"]
     )
 
 # ------------------ PROGRESS ------------------
-st.header("📊 Progress Tracker")
+st.header("📊 Progress Summary")
 
 completed = sum(g["done"] for g in st.session_state.goals)
 total = len(st.session_state.goals)
 
 if total > 0:
-    percent = completed / total
     st.write(f"Completed: {completed}/{total}")
-    st.progress(percent)
+    st.progress(completed / total)
 
-    # Simple chart
-    st.bar_chart({"Progress": [completed, total - completed]})
+    st.bar_chart({
+        "Completed": [completed],
+        "Remaining": [total - completed]
+    })
 else:
-    st.write("No goals added")
+    st.write("No goals added yet")
 
-# ------------------ SMART TIPS ------------------
-st.header("💡 Smart Tips")
+# ------------------ STUDY TIPS ------------------
+st.header("💡 Smart Study Tips")
 
 st.success("""
 ✔ Study consistently  
 ✔ Focus on weak areas  
 ✔ Revise daily  
-✔ Take breaks  
 ✔ Practice questions  
+✔ Take breaks  
 """)
