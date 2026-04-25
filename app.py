@@ -1,10 +1,14 @@
 import streamlit as st
 from datetime import date
 import os
-from openai import OpenAI
 
-# ------------------ API SETUP ------------------
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Try importing OpenAI safely
+try:
+    from openai import OpenAI
+    api_key = os.getenv("OPENAI_API_KEY")
+    client = OpenAI(api_key=api_key) if api_key else None
+except:
+    client = None
 
 # ------------------ PAGE CONFIG ------------------
 st.set_page_config(page_title="AI Study Planner", layout="wide")
@@ -13,13 +17,13 @@ st.set_page_config(page_title="AI Study Planner", layout="wide")
 st.markdown("""
 <style>
 .stApp { background-color: #ffffff; }
-.main, .block-container { color: #111827 !important; }
 
-h1, h2, h3 { color: #111827 !important; }
-
-p, label, div {
+.main, .block-container {
     color: #111827 !important;
-    font-size: 18px !important;
+}
+
+h1, h2, h3 {
+    color: #111827 !important;
 }
 
 /* Sidebar */
@@ -55,29 +59,35 @@ weak_areas = st.sidebar.text_area("⚠ Weak Areas")
 
 # ------------------ AI FUNCTION ------------------
 def generate_ai_plan(subjects, hours, days, weak):
+    if not client:
+        return "⚠ AI feature not available. Please add your OPENAI_API_KEY."
+
     prompt = f"""
-    Create a detailed day-wise study plan.
+    Create a simple and clear day-wise study plan.
 
     Subjects: {subjects}
     Study hours per day: {hours}
     Days left: {days}
     Weak areas: {weak}
 
-    Make it structured, clear, and easy to follow.
+    Keep it structured and easy to follow.
     """
 
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "You are a helpful study planner assistant."},
-            {"role": "user", "content": prompt}
-        ]
-    )
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a study planner."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        return response.choices[0].message.content
 
-    return response.choices[0].message.content
+    except Exception as e:
+        return f"❌ AI Error: {str(e)}"
 
 # ------------------ GENERATE ------------------
-if st.sidebar.button("🚀 Generate AI Plan"):
+if st.sidebar.button("🚀 Generate Plan"):
 
     if subjects.strip() == "":
         st.warning("⚠ Please enter subjects")
@@ -85,20 +95,19 @@ if st.sidebar.button("🚀 Generate AI Plan"):
         days_left = (exam_date - date.today()).days
 
         if days_left <= 0:
-            st.error("❌ Exam date must be in the future")
+            st.error("❌ Exam date must be in future")
         else:
-            with st.spinner("🤖 AI is generating your plan..."):
+            st.subheader("📅 Your Study Plan")
+
+            with st.spinner("Generating plan..."):
                 plan = generate_ai_plan(subjects, hours, days_left, weak_areas)
 
-            st.subheader("📅 Your AI Study Plan")
             st.write(plan)
 
-            # DOWNLOAD
             st.download_button(
-                label="📥 Download Plan",
-                data=plan,
-                file_name="ai_study_plan.txt",
-                mime="text/plain"
+                "📥 Download Plan",
+                plan,
+                file_name="study_plan.txt"
             )
 
 # ------------------ PROGRESS TRACKER ------------------
@@ -131,11 +140,12 @@ else:
     st.write("No tasks yet")
 
 # ------------------ TIPS ------------------
-st.header("💡 AI Study Tips")
+st.header("💡 Study Tips")
 
 st.success("""
-✔ Focus on weak areas first  
+✔ Focus on weak areas  
 ✔ Revise daily  
-✔ Practice questions  
+✔ Practice problems  
 ✔ Take breaks  
 """)
+             
